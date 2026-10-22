@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: echo
+  namespace: echo-a
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      # Keep `match` on one line: a newline silently drops the router.
+      match: Host(`echo-a.example.com`)
+      middlewares:
+        - name: ratelimit
+      services:
+        - name: echo
+          port: 80

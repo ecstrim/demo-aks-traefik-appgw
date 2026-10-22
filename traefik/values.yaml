@@ -1,0 +1,128 @@
+# Traefik v3 on AKS behind Azure Application Gateway.
+# Chart: traefik/traefik 42.1.3 (see README for the install command).
+#
+# TLS terminates at Application Gateway. Traefik only serves plain HTTP
+# on the internal load balancer, so there is no websecure/TLS config here.
+
+image:
+  tag: v3.7.16
+
+deployment:
+  replicas: 2
+  podLabels:
+    app.kubernetes.io/name: traefik
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  # Give in-flight requests time to finish when a pod is replaced.
+  terminationGracePeriodSeconds: 60
+  # The liveness/readiness probes must hit the entrypoint that serves /ping.
+  healthchecksPort: 8000
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - traefik
+          topologyKey: kubernetes.io/hostname
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+# Off by default. Enable it once you have real traffic numbers.
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+# --- EntryPoints ---
+ports:
+  web:
+    port: 8000        # container port (non-privileged)
+    expose:
+      default: true
+    exposedPort: 80   # port on the load balancer
+    protocol: TCP
+    forwardedHeaders:
+      # Trust X-Forwarded-* only from the Application Gateway subnet.
+      trustedIPs:
+        - 10.0.1.0/24 # CHANGE ME: Application Gateway subnet CIDR
+  websecure:
+    expose:
+      default: false  # TLS is handled by Application Gateway
+  metrics:
+    port: 9101
+    expose:
+      default: false  # scrape in-cluster only, never via the LB
+    protocol: TCP
+
+# --- Service: Azure internal load balancer ---
+service:
+  type: LoadBalancer
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: snet-aks # CHANGE ME
+    # Probe the Traefik /ping endpoint (served on the web entrypoint, see below).
+    service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /ping
+  spec:
+    # CHANGE ME: a free IP in the AKS subnet. Application Gateway's backend pool points here.
+    loadBalancerIP: "10.0.2.250"
+    externalTrafficPolicy: Cluster
+
+additionalArguments:
+  - "--ping"
+  - "--ping.entryPoint=web"
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    # Dedicated ClusterIP service for the metrics port, so Prometheus never
+    # scrapes through the load balancer.
+    service:
+      enabled: true
+
+log:
+  level: INFO
+
+accessLog:
+  enabled: true
+  format: json
+  # Only log errors. Remove the filter to log every request.
+  filters:
+    statusCodes: "400-599"
+
+ingressRoute:
+  dashboard:
+    enabled: false
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    # Each IngressRoute can only reference services and middlewares in its own
+    # namespace. This is what keeps the two demo namespaces apart.
+    allowCrossNamespace: false
+  kubernetesIngress:
+    enabled: false
