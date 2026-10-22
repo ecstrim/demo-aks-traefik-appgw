@@ -9,6 +9,11 @@ Client --HTTPS--> Application Gateway --HTTP--> Traefik (internal LB)
                                                    '-- Host(echo-b.example.com) --> ns echo-b / echo
 ```
 
+> **Demo only.** This is an example, not a supported product or a hardened
+> production setup. No warranty, no support. If you use it, you are on your
+> own: review it, test it, and adapt it to your environment first. See
+> [LICENSE](LICENSE) (MIT).
+
 ## Layout
 
 | Path | What |
@@ -92,4 +97,4 @@ kubectl kustomize apps/
 
 ## License
 
-MIT
+MIT, provided as is and without warranty. See [LICENSE](LICENSE).
