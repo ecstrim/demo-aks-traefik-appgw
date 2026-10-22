@@ -12,6 +12,18 @@ spec:
       match: Host(`echo-a.example.com`)
       middlewares:
         - name: ratelimit
+        - name: errors
+      services:
+        - name: echo
+          port: 80
+    # /api/... is sent to the same service with the /api prefix removed.
+    # Longer rule wins, so this takes priority over the route above.
+    - kind: Rule
+      match: Host(`echo-a.example.com`) && PathPrefix(`/api`)
+      middlewares:
+        - name: ratelimit
+        - name: strip-api
+        - name: errors
       services:
         - name: echo
           port: 80

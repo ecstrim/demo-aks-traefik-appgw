@@ -7,3 +7,29 @@ spec:
   rateLimit:
     average: 10
     burst: 20
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: errors
+  namespace: echo-a
+spec:
+  errors:
+    status:
+      - "500-599"
+    # Demo: reuse the echo service as the error backend. Swap in a real
+    # error-page service. Same namespace only (allowCrossNamespace: false).
+    service:
+      name: echo
+      port: 80
+    query: /{status}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api
+  namespace: echo-a
+spec:
+  stripPrefix:
+    prefixes:
+      - /api
