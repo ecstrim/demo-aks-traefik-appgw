@@ -26,6 +26,8 @@ spec:
               value: "true"
             - name: DEMO_NAMESPACE
               value: echo-a
+            - name: DEMO_ROLE
+              value: web
           readinessProbe:
             httpGet:
               path: /

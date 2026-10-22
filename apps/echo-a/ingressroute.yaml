@@ -15,12 +15,13 @@ spec:
       services:
         - name: echo
           port: 80
-    # /api/... is sent to the same service with the /api prefix removed.
+    # /api/... goes to the echo-api service (a different pod) with the /api
+    # prefix removed.
     # Longer rule wins, so this takes priority over the route above.
     - kind: Rule
       match: Host(`echo-a.example.com`) && PathPrefix(`/api`)
       middlewares:
         - name: api-chain
       services:
-        - name: echo
+        - name: echo-api
           port: 80
