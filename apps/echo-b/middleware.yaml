@@ -33,3 +33,60 @@ spec:
   stripPrefix:
     prefixes:
       - /api
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: headers
+  namespace: echo-b
+spec:
+  headers:
+    stsSeconds: 31536000
+    stsIncludeSubdomains: true
+    contentTypeNosniff: true
+    frameDeny: true
+    referrerPolicy: strict-origin-when-cross-origin
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: echo-b
+spec:
+  compress: {}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: retry
+  namespace: echo-b
+spec:
+  retry:
+    attempts: 3
+    initialInterval: 100ms
+---
+# Order matters: the first middleware is the outermost.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: web-chain
+  namespace: echo-b
+spec:
+  chain:
+    middlewares:
+      - name: headers
+      - name: compress
+      - name: retry
+      - name: ratelimit
+      - name: errors
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: api-chain
+  namespace: echo-b
+spec:
+  chain:
+    middlewares:
+      - name: strip-api
+      - name: web-chain

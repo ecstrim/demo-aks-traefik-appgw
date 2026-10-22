@@ -11,8 +11,7 @@ spec:
       # Keep `match` on one line: a newline silently drops the router.
       match: Host(`echo-b.example.com`)
       middlewares:
-        - name: ratelimit
-        - name: errors
+        - name: web-chain
       services:
         - name: echo
           port: 80
@@ -21,9 +20,7 @@ spec:
     - kind: Rule
       match: Host(`echo-b.example.com`) && PathPrefix(`/api`)
       middlewares:
-        - name: ratelimit
-        - name: strip-api
-        - name: errors
+        - name: api-chain
       services:
         - name: echo
           port: 80
