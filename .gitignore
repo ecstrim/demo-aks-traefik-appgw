@@ -3,3 +3,6 @@
 .env
 *.key
 *.pem
+
+# local demo support material
+misc/
